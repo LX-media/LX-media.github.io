@@ -4,6 +4,12 @@ import { getConfig } from './config.js';
 
 class Dashboard {
   constructor() {
+    // Add initialization tracking
+    if (window._dashboardInitialized) {
+      return;
+    }
+    window._dashboardInitialized = true;
+
     this.setupDarkMode();
 
     const { token, orgName } = getConfig();
@@ -321,7 +327,19 @@ class Dashboard {
         <a href="${repo.html_url}" target="_blank" class="text-lg font-medium text-blue-600 dark:text-blue-400 hover:underline">
           ${repo.name}
         </a>
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <div class="flex flex-wrap items-center gap-2 mt-1">
+          ${repo.language ? `
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+              ${repo.language}
+            </span>
+          ` : ''}
+          ${(repo.topics || []).map(topic => `
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+              ${topic}
+            </span>
+          `).join('')}
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Last updated: ${new Date(repo.pushed_at).toLocaleString(navigator.language, { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
       </div>
@@ -474,6 +492,7 @@ class Dashboard {
       prs = prs.filter(pr =>
         pr.title.toLowerCase().includes(query) ||
         pr.user.login.toLowerCase().includes(query) ||
+        pr.user.name.toLowerCase().includes(query) ||
         pr.repoName.toLowerCase().includes(query)
       );
     }
@@ -554,7 +573,7 @@ class Dashboard {
           </span>
         </div>
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          By ${pr.user.login} • Updated: ${new Date(pr.updated_at).toLocaleString()}
+          By ${pr.user.name !== pr.user.login ? `${pr.user.name} (${pr.user.login})` : pr.user.login} • Updated: ${new Date(pr.updated_at).toLocaleString()}
         </p>
       </div>
     `;

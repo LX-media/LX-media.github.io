@@ -8,6 +8,8 @@ class GitHubAPI {
     this.rateLimitWarningThreshold = 100; // Warn when remaining calls are below this
     this.onRateLimitWarning = () => { }; // Callback for rate limit warnings
     this.reposPerPage = parseInt(localStorage.getItem('reposPerPage')) || 20;
+    this.userCache = new Map();
+    this.userCacheTimeout = 30 * 24 * 60 * 60 * 1000; // 30 days
   }
 
   async fetchWithRateLimit(url, options = {}) {
@@ -55,13 +57,45 @@ class GitHubAPI {
     return data;
   }
 
+  async getUserDetails(username) {
+    const cacheKey = `user:${username}`;
+    const cachedData = this.userCache.get(cacheKey);
+
+    if (cachedData && (Date.now() - cachedData.timestamp) < this.userCacheTimeout) {
+      return cachedData.data;
+    }
+
+    try {
+      const user = await this.fetchWithRateLimit(`${this.baseUrl}/users/${username}`);
+      const data = {
+        login: user.login,
+        name: user.name || user.login
+      };
+
+      this.userCache.set(cacheKey, {
+        data,
+        timestamp: Date.now()
+      });
+
+      return data;
+    } catch (error) {
+      console.warn(`Failed to fetch details for user ${username}:`, error);
+      return { login: username, name: username };
+    }
+  }
+
   async getOrganization(orgName) {
     return this.fetchWithRateLimit(`${this.baseUrl}/orgs/${orgName}`);
   }
 
   async getActiveRepositories(orgName) {
     const repos = await this.fetchWithRateLimit(
-      `${this.baseUrl}/orgs/${orgName}/repos?sort=pushed&direction=desc&per_page=${this.reposPerPage}`
+      `${this.baseUrl}/orgs/${orgName}/repos?sort=pushed&direction=desc&per_page=${this.reposPerPage}`,
+      {
+        headers: {
+          'Accept': 'application/vnd.github.mercy-preview+json' // Required for topics
+        }
+      }
     );
     return repos.filter(repo => {
       return !repo.archived;
@@ -94,12 +128,15 @@ class GitHubAPI {
         `${this.baseUrl}/repos/${orgName}/${repo.name}/pulls?state=open`
       );
 
-      // Fetch reviews for each PR
+      // Fetch reviews and user details for each PR
       for (const pr of prs) {
-        const reviews = await this.getPullRequestReviews(orgName, repo.name, pr.number);
+        const [reviews, userDetails] = await Promise.all([
+          this.getPullRequestReviews(orgName, repo.name, pr.number),
+          this.getUserDetails(pr.user.login)
+        ]);
+
         const reviewState = this.determineReviewState(reviews);
 
-        // Store only essential data
         pullRequests.push({
           number: pr.number,
           title: pr.title,
@@ -107,9 +144,7 @@ class GitHubAPI {
           created_at: pr.created_at,
           updated_at: pr.updated_at,
           repoName: repo.name,
-          user: {
-            login: pr.user.login
-          },
+          user: userDetails,
           labels: pr.labels.map(label => ({
             name: label.name,
             color: label.color
