@@ -7,6 +7,7 @@ class GitHubAPI {
     this.reviewStateCache = new Map();
     this.rateLimitWarningThreshold = 100; // Warn when remaining calls are below this
     this.onRateLimitWarning = () => { }; // Callback for rate limit warnings
+    this.reposPerPage = parseInt(localStorage.getItem('reposPerPage')) || 20;
   }
 
   async fetchWithRateLimit(url, options = {}) {
@@ -60,9 +61,11 @@ class GitHubAPI {
 
   async getActiveRepositories(orgName) {
     const repos = await this.fetchWithRateLimit(
-      `${this.baseUrl}/orgs/${orgName}/repos?sort=pushed&direction=desc&per_page=20`
+      `${this.baseUrl}/orgs/${orgName}/repos?sort=pushed&direction=desc&per_page=${this.reposPerPage}`
     );
-    return repos.filter(repo => !repo.archived);
+    return repos.filter(repo => {
+      return !repo.archived;
+    });
   }
 
   async getAllRepositories(orgName) {
@@ -96,11 +99,27 @@ class GitHubAPI {
         const reviews = await this.getPullRequestReviews(orgName, repo.name, pr.number);
         const reviewState = this.determineReviewState(reviews);
 
+        // Store only essential data
         pullRequests.push({
-          ...pr,
+          number: pr.number,
+          title: pr.title,
+          html_url: pr.html_url,
+          created_at: pr.created_at,
+          updated_at: pr.updated_at,
           repoName: repo.name,
+          user: {
+            login: pr.user.login
+          },
+          labels: pr.labels.map(label => ({
+            name: label.name,
+            color: label.color
+          })),
           reviewState,
-          reviews
+          reviews: reviews.map(review => ({
+            state: review.state,
+            user: { id: review.user.id },
+            submitted_at: review.submitted_at
+          }))
         });
       }
     }

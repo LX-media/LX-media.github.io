@@ -10,11 +10,24 @@ class Dashboard {
     this.orgName = orgName;
     this.token = token;
 
+    // Add cache duration property
+    this.cacheDuration = parseInt(localStorage.getItem('prCacheDuration')) || 60; // Default 60 minutes
+    // Make storage key organization-aware
+    this.storageKey = `github-dashboard-pr-cache-${orgName}`;
+
+    // Add repos per page configuration
+    this.reposPerPage = parseInt(localStorage.getItem('reposPerPage')) || 20;
+
     // Update configuration status indicators
     this.updateConfigStatus(orgName, !!token);
 
     if (!this.token) {
-      this.showError('GitHub token is required. Either set GITHUB_TOKEN environment variable or add it as a URL parameter: ?token=your-token');
+      this.showError(
+        'GitHub token is required. Either set GITHUB_TOKEN environment variable or add it as a URL parameter: ?token=your-token\n\n' +
+        'Required token scopes:\n' +
+        '• repo (read-only access to repositories)\n' +
+        '• org:read (read-only access to organization data)'
+      );
       return;
     }
 
@@ -54,6 +67,9 @@ class Dashboard {
 
     // Update configuration status indicators
     this.updateConfigStatus(orgName, !!token);
+
+    // Try to load cached data immediately
+    this.loadCachedData();
   }
 
   updateConfigStatus(orgName, hasToken) {
@@ -87,7 +103,7 @@ class Dashboard {
     if (isExpanded) {
       content.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
-      toggleBtn.classList.remove(...border.split(' '));
+      toggleBtn.classList.add(...border.split(' '));
     }
 
     toggleBtn.addEventListener('click', () => {
@@ -95,11 +111,11 @@ class Dashboard {
       content.classList.toggle('hidden');
       icon.style.transform = isHidden ? 'rotate(180deg)' : '';
 
-      // Toggle border
+      // Toggle border - only show when expanded
       if (isHidden) {
-        toggleBtn.classList.remove(...border.split(' '));
-      } else {
         toggleBtn.classList.add(...border.split(' '));
+      } else {
+        toggleBtn.classList.remove(...border.split(' '));
       }
 
       // Save state
@@ -164,7 +180,9 @@ class Dashboard {
     // Filter click handlers - Update to handle both data attributes and classList properly
     document.addEventListener('click', (e) => {
       const filterBtn = e.target.closest('[data-filter-type]');
-      if (!filterBtn) return;
+      if (!filterBtn) {
+        return;
+      }
 
       const type = filterBtn.dataset.filterType;
       const value = filterBtn.dataset.filterValue;
@@ -212,6 +230,31 @@ class Dashboard {
       labelOperatorToggle.textContent = this.labelOperator;
       this.filterStore.updateFilter('labelOperator', this.labelOperator);
       this.renderPullRequests();
+    });
+
+    // Add refresh button click handler
+    document.getElementById('refreshPRs').addEventListener('click', () => {
+      this.loadPullRequests(true);
+    });
+
+    // Add cache duration input handler
+    document.getElementById('cacheDuration').addEventListener('change', (e) => {
+      const value = parseInt(e.target.value);
+      if (value > 0) {
+        this.cacheDuration = value;
+        localStorage.setItem('prCacheDuration', value);
+      }
+    });
+
+    // Add repos per page input handler
+    document.getElementById('reposPerPage').addEventListener('change', (e) => {
+      const value = parseInt(e.target.value);
+      if (value > 0) {
+        this.reposPerPage = value;
+        localStorage.setItem('reposPerPage', value);
+        this.github.reposPerPage = value;
+        this.loadRepositories();
+      }
     });
   }
 
@@ -285,73 +328,104 @@ class Dashboard {
     `).join('');
   }
 
-  showPRLoading() {
-    const prList = document.getElementById('prList');
-    this.isLoadingPRs = true;
+  showPRLoading(forceRefresh = false) {
+    if (!forceRefresh) {
+      const prList = document.getElementById('prList');
+      this.isLoadingPRs = true;
 
-    // Create mock repository groups with skeletons
-    const mockRepos = ['Repository 1', 'Repository 2'];
-    prList.innerHTML = mockRepos.map(repoName => `
-      <div class="mb-6">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-          <div class="h-6 w-48 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
-        </h3>
-        <div class="space-y-4">
-          ${Array(2).fill(0).map(() => `
-            <div class="animate-pulse border-l-4 border-gray-200 dark:border-gray-600 pl-4">
-              <div class="flex flex-col gap-2">
-                <!-- PR Title -->
-                <div class="h-6 w-full bg-gray-200 dark:bg-gray-600 rounded"></div>
-                <!-- Review state and labels -->
-                <div class="flex gap-2 mt-1">
-                  <div class="h-5 w-24 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                  <div class="h-5 w-20 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                  <div class="h-5 w-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
+      // Create mock repository groups with skeletons
+      const mockRepos = ['Repository 1', 'Repository 2'];
+      prList.innerHTML = mockRepos.map(repoName => `
+        <div class="mb-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
+            <div class="h-6 w-48 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
+          </h3>
+          <div class="space-y-4">
+            ${Array(2).fill(0).map(() => `
+              <div class="animate-pulse border-l-4 border-gray-200 dark:border-gray-600 pl-4">
+                <div class="flex flex-col gap-2">
+                  <!-- PR Title -->
+                  <div class="h-6 w-full bg-gray-200 dark:bg-gray-600 rounded"></div>
+                  <!-- Review state and labels -->
+                  <div class="flex gap-2 mt-1">
+                    <div class="h-5 w-24 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                    <div class="h-5 w-20 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                    <div class="h-5 w-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                  </div>
+                  <!-- Author and date -->
+                  <div class="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
                 </div>
-                <!-- Author and date -->
-                <div class="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
               </div>
-            </div>
-          `).join('')}
+            `).join('')}
+          </div>
         </div>
-      </div>
-    `).join('');
-  }
-
-  async loadPullRequests() {
-    try {
-      this.showPRLoading();
-
-      // Show loading state in stats if expanded
-      const statsContent = document.getElementById('statsContent');
-      const prStats = document.getElementById('prStats');
-      if (!statsContent.classList.contains('hidden')) {
-        prStats.innerHTML = `
-          <div class="animate-pulse">
-            <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-48"></div>
-            <div class="space-y-2">
-              <div class="flex justify-between">
-                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+      `).join('');
+    } else {
+      // Only add one loading skeleton at the top
+      const firstRepo = document.querySelector('#prList > div:first-child');
+      if (firstRepo) {
+        const loadingSkeleton = document.createElement('div');
+        loadingSkeleton.className = 'mb-6 loading-skeleton';
+        loadingSkeleton.innerHTML = `
+          <div class="animate-pulse border-l-4 border-gray-200 dark:border-gray-600 pl-4">
+            <div class="flex flex-col gap-2">
+              <div class="h-6 w-full bg-gray-200 dark:bg-gray-600 rounded"></div>
+              <div class="flex gap-2 mt-1">
+                <div class="h-5 w-24 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                <div class="h-5 w-20 bg-gray-200 dark:bg-gray-600 rounded"></div>
               </div>
-              <div class="flex justify-between">
-                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
-                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
-              </div>
-              <div class="flex justify-between">
-                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28"></div>
-                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
-              </div>
+              <div class="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
             </div>
           </div>
         `;
+        firstRepo.parentNode.insertBefore(loadingSkeleton, firstRepo);
+      }
+    }
+  }
+
+  async loadPullRequests(forceRefresh = false) {
+    // Always show loading state for force refresh
+    if (forceRefresh) {
+      // Keep existing PRs visible but add loading indicator at top
+      this.showPRLoading(true);
+    } else if (!this.pullRequests.length) {
+      // Only show full loading state if no PRs are currently displayed
+      this.showPRLoading(false);
+    }
+
+    try {
+      // Try to use cache first (unless forcing refresh)
+      const cached = localStorage.getItem(this.storageKey);
+      if (cached && !forceRefresh) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        const maxAge = this.cacheDuration * 60 * 1000;
+
+        if (age < maxAge) {
+          this.pullRequests = data;
+          this.lastUpdateTime = new Date(timestamp);
+          this.renderPRStats();
+          this.renderPullRequests();
+          this.updateLastFetchTime();
+          return;
+        }
       }
 
+      // Fetch fresh data
       this.pullRequests = await this.github.getOpenPullRequests(this.orgName);
+      this.savePRCache();
       this.renderPRStats();
-    } finally {
-      this.isLoadingPRs = false;
       this.renderPullRequests();
+      this.updateLastFetchTime();
+    } catch (error) {
+      this.showError(`Failed to load pull requests: ${error.message}`);
+    } finally {
+      // Remove loading skeleton
+      const loadingSkeleton = document.querySelector('.loading-skeleton');
+      if (loadingSkeleton) {
+        loadingSkeleton.remove();
+      }
+      this.isLoadingPRs = false;
     }
   }
 
@@ -384,10 +458,14 @@ class Dashboard {
     let prs = [...this.pullRequests]; // Create a copy for sorting
 
     if (this.hideRenovate) {
-      prs = prs.filter(pr => pr.user.login !== 'renovate[bot]');
+      prs = prs.filter((pr) => {
+        return pr.user.login !== 'renovate[bot]';
+      });
     }
     if (this.hideDependabot) {
-      prs = prs.filter(pr => pr.user.login !== 'dependabot[bot]');
+      prs = prs.filter((pr) => {
+        return pr.user.login !== 'dependabot[bot]';
+      });
     }
 
     // Apply filters
@@ -463,21 +541,21 @@ class Dashboard {
 
     return `
       <div class="border-l-4 ${borderColor} pl-4">
-      <div class="flex items-center gap-2">
-        <a href="${pr.html_url}" target="_blank" class="text-lg font-medium text-blue-600 dark:text-blue-400 hover:underline truncate">
-        ${pr.title}
-        </a>
-      </div>
-      <div class="flex flex-wrap gap-1 mt-1">
-        ${this.renderReviewState(pr.reviewState)}
-        ${pr.labels.map(label => this.renderLabel(label)).join('')}
-        <span class="text-sm text-gray-500 dark:text-gray-400">
-        ${pr.reviews.length} reviews
-        </span>
-      </div>
-      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-        By ${pr.user.login} • Updated: ${new Date(pr.updated_at).toLocaleString()}
-      </p>
+        <div class="flex items-center gap-2">
+          <a href="${pr.html_url}" target="_blank" class="text-lg font-medium text-blue-600 dark:text-blue-400 hover:underline truncate">
+            ${pr.title}
+          </a>
+        </div>
+        <div class="flex flex-wrap gap-1 mt-1">
+          ${this.renderReviewState(pr.reviewState)}
+          ${pr.labels.map(label => this.renderLabel(label)).join('')}
+          <span class="text-sm text-gray-500 dark:text-gray-400">
+            ${pr.reviews.length} reviews
+          </span>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          By ${pr.user.login} • Updated: ${new Date(pr.updated_at).toLocaleString()}
+        </p>
       </div>
     `;
   }
@@ -505,11 +583,14 @@ class Dashboard {
 
   hexToRgb(hex) {
     const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
+    if (!result) {
+      return null;
+    }
+    return {
       r: parseInt(result[1], 16),
       g: parseInt(result[2], 16),
       b: parseInt(result[3], 16)
-    } : null;
+    };
   }
 
   updateFilterButtons() {
@@ -564,6 +645,33 @@ class Dashboard {
         ${counts.labels + counts.reviewStates > 0 ? `(${counts.labels + counts.reviewStates} filters active)` : ''}
       </span>
     `;
+  }
+
+  loadCachedData() {
+    const cached = localStorage.getItem(this.storageKey);
+    if (!cached) {
+      return;
+    }
+
+    const { data, timestamp } = JSON.parse(cached);
+    const age = Date.now() - timestamp;
+    const maxAge = this.cacheDuration * 60 * 1000;
+
+    if (age < maxAge) {
+      this.pullRequests = data;
+      this.lastUpdateTime = new Date(timestamp);
+      this.renderPRStats();
+      this.renderPullRequests();
+      this.updateLastFetchTime();
+    }
+  }
+
+  savePRCache() {
+    const cache = {
+      data: this.pullRequests,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(this.storageKey, JSON.stringify(cache));
   }
 }
 

@@ -24,9 +24,16 @@ See [TODO.md](TODO.md) for planned improvements focused on small team usage.
 
 ## Prerequisites
 
-- GitHub Personal Access Token (PAT) with these permissions:
-  - `repo` (read-only access to repositories)
-  - `org:read` (read-only access to organization data)
+- GitHub Personal Access Token (PAT) with these scopes:
+  - `repo` - Required for:
+    - Reading repository information
+    - Accessing pull requests
+    - Reading PR reviews and comments
+  - `org:read` - Required for:
+    - Reading organization information
+    - Listing organization repositories
+
+> Note: Read-only access is sufficient; no write permissions are needed.
 
 ## Configuration
 
