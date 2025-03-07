@@ -1,0 +1,124 @@
+/* PR Label styles */
+.pr-label {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  display: inline-block;
+  margin: 0.125rem;
+}
+
+/* Review state badges */
+.review-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.review-pending {
+  background-color: rgb(243, 244, 246);
+  color: rgb(107, 114, 128);
+}
+
+.review-approved {
+  background-color: rgb(209, 250, 229);
+  color: rgb(6, 95, 70);
+}
+
+.review-changes {
+  background-color: rgb(254, 226, 226);
+  color: rgb(153, 27, 27);
+}
+
+/* Dark mode variants */
+.dark .review-pending {
+  background-color: rgb(75, 85, 99);
+  color: rgb(209, 213, 219);
+}
+
+.dark .review-approved {
+  background-color: rgb(6, 78, 59);
+  color: rgb(167, 243, 208);
+}
+
+.dark .review-changes {
+  background-color: rgb(127, 29, 29);
+  color: rgb(254, 202, 202);
+}
+
+/* Filter button active state */
+.filter-active {
+  @apply ring-2 ring-blue-500 dark: ring-blue-400;
+}
+
+/* Review state filter active states */
+.review-state.filter-active.review-approved {
+  box-shadow: 0 0 0 2px rgb(6, 95, 70);
+}
+
+.review-state.filter-active.review-changes {
+  box-shadow: 0 0 0 2px rgb(153, 27, 27);
+}
+
+.review-state.filter-active.review-pending {
+  box-shadow: 0 0 0 2px rgb(107, 114, 128);
+}
+
+/* Dark mode variants */
+.dark .review-state.filter-active.review-approved {
+  box-shadow: 0 0 0 2px rgb(167, 243, 208);
+}
+
+.dark .review-state.filter-active.review-changes {
+  box-shadow: 0 0 0 2px rgb(254, 202, 202);
+}
+
+.dark .review-state.filter-active.review-pending {
+  box-shadow: 0 0 0 2px rgb(209, 213, 219);
+}
+
+/* Label filter active states */
+button[data-filter-type="labels"].filter-active {
+  border: 2px solid rgb(59, 130, 246);
+  background-color: rgb(219, 234, 254);
+  color: rgb(30, 64, 175);
+}
+
+.dark button[data-filter-type="labels"].filter-active {
+  border-color: rgb(96, 165, 250);
+  background-color: rgb(30, 58, 138);
+  color: rgb(191, 219, 254);
+}
+
+/* Filter button hover states */
+button[data-filter-type="labels"]:hover {
+  background-color: rgb(209, 213, 219);
+}
+
+.dark button[data-filter-type="labels"]:hover {
+  background-color: rgb(75, 85, 99);
+}
+
+button[data-filter-type="labels"].filter-active:hover {
+  background-color: rgb(191, 219, 254);
+}
+
+.dark button[data-filter-type="labels"].filter-active:hover {
+  background-color: rgb(30, 64, 175);
+}
+
+/* Stats toggle button hover state */
+#statsToggle:hover {
+  @apply bg-gray-50 dark: bg-gray-700;
+}
+
+#statsToggle svg {
+  @apply text-gray-500 dark: text-gray-400;
+}
+
+#statsToggle:hover svg {
+  @apply text-gray-700 dark: text-gray-300;
+}

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Organization Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import { config } from "./js/tailwind.config.js";
+      tailwind.config = {
+        ...config,
+        content: ["./**/*.{html,js}"],
+      };
+    </script>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+      <header class="mb-8">
+        <div class="flex justify-between items-center mb-4">
+          <h1
+            class="text-3xl font-bold text-gray-900 dark:text-white"
+            id="orgName"
+          >
+            Loading...
+          </h1>
+          <button
+            id="darkModeToggle"
+            class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+          >
+            <svg
+              class="w-6 h-6 dark:hidden"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+              />
+            </svg>
+            <svg
+              class="w-6 h-6 hidden dark:block"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+              />
+            </svg>
+          </button>
+        </div>
+        <p class="text-gray-600 dark:text-gray-400" id="orgDesc"></p>
+        <p
+          class="text-sm text-gray-500 dark:text-gray-400 mt-2"
+          id="lastUpdate"
+        ></p>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Left Column -->
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            Active Repositories (Last 20)
+          </h2>
+          <div id="reposList" class="space-y-4"></div>
+        </section>
+
+        <!-- Right Column -->
+        <div class="space-y-8">
+          <!-- PR Stats Section (Collapsible) -->
+          <section class="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <button
+              id="statsToggle"
+              class="w-full p-6 text-left flex justify-between items-center border-b border-gray-200 dark:border-gray-700"
+            >
+              <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                Pull Request Statistics
+              </h2>
+              <svg
+                class="w-5 h-5 transform transition-transform duration-200"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            <div id="statsContent" class="hidden p-6">
+              <div id="prStats" class="space-y-2"></div>
+            </div>
+          </section>
+
+          <!-- Open Pull Requests Section -->
+          <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex flex-col gap-4 mb-4">
+              <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                  Open Pull Requests
+                </h2>
+                <div id="filterCounts"></div>
+              </div>
+
+              <!-- Search and filter controls -->
+              <div class="space-y-3">
+                <div class="flex gap-2">
+                  <input
+                    type="search"
+                    id="prSearch"
+                    placeholder="Search PRs by title, author, or repository..."
+                    class="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+                  />
+                  <button
+                    id="clearFilters"
+                    class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+
+                <!-- Filter groups -->
+                <div class="space-y-3">
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      id="hideRenovateBtn"
+                      class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+                    >
+                      Hide Renovate PRs
+                    </button>
+                    <button
+                      id="hideDependabotBtn"
+                      class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+                    >
+                      Hide Dependabot PRs
+                    </button>
+                    <button
+                      id="sortPRsBtn"
+                      class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+                    >
+                      Sort by Newest
+                    </button>
+                  </div>
+
+                  <!-- Label filters section -->
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-2" id="labelFilterHeader">
+                      <span class="text-sm text-gray-600 dark:text-gray-400"
+                        >Labels - Operator selected:</span
+                      >
+                      <button
+                        id="labelOperatorToggle"
+                        class="hidden px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+                        title="Toggle between AND/OR for label filters"
+                      >
+                        OR
+                      </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2" id="labelFilters"></div>
+                  </div>
+
+                  <!-- Review state filters -->
+                  <div class="flex flex-wrap gap-2">
+                    <span class="text-sm text-gray-600 dark:text-gray-400"
+                      >Review State:</span
+                    >
+                    <button
+                      data-filter-type="reviewState"
+                      data-filter-value="APPROVED"
+                      class="review-state review-approved"
+                    >
+                      ✓ Approved
+                    </button>
+                    <button
+                      data-filter-type="reviewState"
+                      data-filter-value="CHANGES_REQUESTED"
+                      class="review-state review-changes"
+                    >
+                      × Changes Requested
+                    </button>
+                    <button
+                      data-filter-type="reviewState"
+                      data-filter-value="PENDING"
+                      class="review-state review-pending"
+                    >
+                      ⊙ Pending
+                    </button>
+                  </div>
+
+                  <!-- Label filters (dynamically populated) -->
+                  <div class="flex flex-wrap gap-2" id="labelFilters"></div>
+                </div>
+              </div>
+            </div>
+            <div id="prList" class="space-y-4"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Error Messages -->
+      <div
+        id="errorMessage"
+        class="hidden mt-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded"
+      ></div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
