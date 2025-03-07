@@ -12,7 +12,8 @@ export class FilterStore {
       sortNewest: true,
       labels: [],
       reviewStates: [],
-      search: ''
+      search: '',
+      labelOperator: 'OR' // Add default operator
     };
   }
 
@@ -32,7 +33,8 @@ export class FilterStore {
       sortNewest: true,
       labels: [],
       reviewStates: [],
-      search: ''
+      search: '',
+      labelOperator: 'OR' // Add default operator
     };
     this.saveFilters();
   }
