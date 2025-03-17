@@ -143,7 +143,7 @@ class Dashboard {
 
   showError(message) {
     const errorDiv = document.getElementById('errorMessage');
-    errorDiv.textContent = message;
+    errorDiv.innerHTML = message.replace(/\n/g, '<br>');
     errorDiv.classList.remove('hidden');
   }
 

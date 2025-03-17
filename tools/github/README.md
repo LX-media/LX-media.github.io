@@ -8,6 +8,11 @@ A simple dashboard to monitor your GitHub organization's repositories and pull r
 
 - Shows last 20 active repositories
 - Lists all open pull requests across the organization
+- GitHub Actions status overview per repository
+  - Current workflow status
+  - Latest run details
+  - Failed job information
+  - Build errors and warnings
 - Filter and search capabilities:
   - Search by title, author, or repository
   - Filter by review state
@@ -32,6 +37,10 @@ See [TODO.md](TODO.md) for planned improvements focused on small team usage.
   - `org:read` - Required for:
     - Reading organization information
     - Listing organization repositories
+  - `actions:read` - Required for:
+    - Accessing workflow runs
+    - Reading workflow failures
+    - Viewing build annotations and errors
 
 > Note: Read-only access is sufficient; no write permissions are needed.
 

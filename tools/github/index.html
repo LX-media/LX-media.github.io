@@ -17,14 +17,22 @@
       <!-- Fixed header structure -->
       <header class="mb-8">
         <div class="flex justify-between items-start mb-4">
-          <!-- Left side with title -->
+          <!-- Left side with title and nav -->
           <div>
-            <h1
-              class="text-3xl font-bold text-gray-900 dark:text-white"
-              id="orgName"
-            >
-              Loading...
-            </h1>
+            <div class="flex items-center gap-4 mb-2">
+              <h1
+                class="text-3xl font-bold text-gray-900 dark:text-white"
+                id="orgName"
+              >
+                Loading...
+              </h1>
+              <a
+                href="actions.html"
+                id="actionsPageLink"
+                class="text-blue-600 dark:text-blue-400 hover:underline"
+                >View Actions</a
+              >
+            </div>
             <p class="text-gray-600 dark:text-gray-400" id="orgDesc"></p>
             <p
               class="text-sm text-gray-500 dark:text-gray-400 mt-2"
@@ -322,5 +330,23 @@
     </div>
 
     <script type="module" src="js/app.js"></script>
+    <script>
+      // Set up token passing between pages
+      document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+        const orgName = urlParams.get("org");
+        const actionsLink = document.getElementById("actionsPageLink");
+
+        if (token) {
+          const actionsUrl = new URL(actionsLink.href, window.location.href);
+          actionsUrl.searchParams.set("token", token);
+          if (orgName) {
+            actionsUrl.searchParams.set("org", orgName);
+          }
+          actionsLink.href = actionsUrl.toString();
+        }
+      });
+    </script>
   </body>
 </html>
