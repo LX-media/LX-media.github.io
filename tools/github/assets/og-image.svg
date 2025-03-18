@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#161B22" />
+
+  <!-- Visual Grid Lines -->
+  <path d="M0 315 H1200" stroke="#30363D" stroke-width="1" />
+  <path d="M600 0 V630" stroke="#30363D" stroke-width="1" />
+
+  <!-- Dashboard Element -->
+  <rect x="300" y="180" width="600" height="270" rx="8" fill="#0D1117" stroke="#30363D" stroke-width="2" />
+
+  <!-- Header Bar -->
+  <rect x="300" y="180" width="600" height="50" rx="8" fill="#161B22" stroke="#30363D" stroke-width="2" />
+
+  <!-- GitHub Logo (simplified) -->
+  <circle cx="330" cy="205" r="15" fill="#FFFFFF" />
+
+  <!-- Action items representation -->
+  <rect x="320" y="250" width="560" height="40" rx="4" fill="#21262D" />
+  <circle cx="340" cy="270" r="8" fill="#3FB950" /> <!-- success status -->
+  <rect x="360" y="262" width="200" height="16" rx="2" fill="#8B949E" />
+  <rect x="580" y="262" width="100" height="16" rx="2" fill="#6E7681" />
+
+  <rect x="320" y="300" width="560" height="40" rx="4" fill="#21262D" />
+  <circle cx="340" cy="320" r="8" fill="#F85149" /> <!-- failure status -->
+  <rect x="360" y="312" width="180" height="16" rx="2" fill="#8B949E" />
+  <rect x="580" y="312" width="100" height="16" rx="2" fill="#6E7681" />
+
+  <rect x="320" y="350" width="560" height="40" rx="4" fill="#21262D" />
+  <circle cx="340" cy="370" r="8" fill="#F0883E" /> <!-- running status -->
+  <rect x="360" y="362" width="220" height="16" rx="2" fill="#8B949E" />
+  <rect x="580" y="362" width="100" height="16" rx="2" fill="#6E7681" />
+
+  <!-- Title text -->
+  <text x="600" y="480" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#FFFFFF"
+    text-anchor="middle">GitHub Actions Dashboard</text>
+  <text x="600" y="520" font-family="Arial, sans-serif" font-size="24" fill="#8B949E" text-anchor="middle">Monitor your
+    workflow runs in real-time</text>
+</svg>

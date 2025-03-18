@@ -29,6 +29,8 @@ See [TODO.md](TODO.md) for planned improvements focused on small team usage.
 
 ## Prerequisites
 
+Use the token from 1password: `GITHUB_ORG_DASHBOARD_PAT dev@lx ORG`.
+
 - GitHub Personal Access Token (PAT) with these scopes:
   - `repo` - Required for:
     - Reading repository information

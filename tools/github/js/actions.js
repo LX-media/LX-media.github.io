@@ -16,6 +16,7 @@ class ActionsDashboard {
 
     if (!this.token) {
       this.showError(
+        'Use the token from 1password: `GITHUB_ORG_DASHBOARD_PAT dev@lx ORG`.\n\n' +
         'GitHub token is required. Required token scopes:\n' +
         '• repo (read-only access to repositories)\n' +
         '• org:read (read-only access to organization data)\n' +
@@ -32,6 +33,7 @@ class ActionsDashboard {
     this.actions.onScopeWarning = function () {
       console.log("Scope warning callback triggered");
       self.showError(
+        'Use the token from 1password: `GITHUB_ORG_DASHBOARD_PAT dev@lx ORG`.\n\n' +
         'GitHub token is missing required scopes. To be able to view annotations in workflow runs, add:\n' +
         '• actions:read (access to Actions runs and annotations)'
       );
@@ -169,19 +171,21 @@ class ActionsDashboard {
     const warnings = annotations.filter(a => a.level === 'warning');
     const errors = annotations.filter(a => a.level === 'error');
 
-    if (!warnings.length && !errors.length) return '';
+    if (!warnings.length && !errors.length) {
+      return '';
+    }
 
     return `
-      <div class="pl-4 text-sm space-y-2">
+      <div class="pl-4 text-sm space-y-2 w-full overflow-hidden text-wrap">
         ${errors.length > 0 ? `
           <div class="text-red-600 dark:text-red-400">
-            <div class="font-medium">Errors:</div>
+            <div class="font-medium">❌ Errors:</div>
             ${this.renderAnnotationList(errors)}
           </div>
         ` : ''}
         ${warnings.length > 0 ? `
           <div class="text-yellow-600 dark:text-yellow-400">
-            <div class="font-medium">Warnings:</div>
+            <div class="font-medium">⚠️ Warnings:</div>
             ${this.renderAnnotationList(warnings)}
           </div>
         ` : ''}
@@ -193,8 +197,10 @@ class ActionsDashboard {
     return `
       <ul class="list-disc list-inside pl-4">
         ${annotations.map(annotation => `
-          <li class="truncate" title="${annotation.message.replace(/"/g, '&quot;')}">
-            ${annotation.file}:${annotation.line} - ${annotation.title || annotation.message}
+          <li class="flex">
+            <div class="truncate max-w-full text-wrap" title="${annotation.message.replace(/"/g, '&quot;')}">
+              ${annotation.file}:${annotation.line} - ${annotation.title || annotation.message}
+            </div>
           </li>
         `).join('')}
       </ul>

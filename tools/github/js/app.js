@@ -29,7 +29,8 @@ class Dashboard {
 
     if (!this.token) {
       this.showError(
-        'GitHub token is required. Either set GITHUB_TOKEN environment variable or add it as a URL parameter: ?token=your-token\n\n' +
+        'GitHub token is required. Either set GITHUB_TOKEN environment variable or add it as a URL parameter: ?token=your-token\n' +
+        'Use the token from 1password: `GITHUB_ORG_DASHBOARD_PAT dev@lx ORG`.\n\n' +
         'Required token scopes:\n' +
         '• repo (read-only access to repositories)\n' +
         '• org:read (read-only access to organization data)'

@@ -26,7 +26,30 @@ class GitHubActionsAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub API Error: status=${response.status} statusText=${response.statusText}`);
+      const status = response.status;
+      const responseText = await response.text();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = {};
+      }
+
+      const errorParts = [`GitHub API Error: ${status}`];
+
+      if (response.statusText) {
+        errorParts.push(`Status: ${response.statusText}`);
+      }
+
+      if (responseData.message) {
+        errorParts.push(`Message: ${responseData.message}`);
+      }
+
+      if (responseData.documentation_url) {
+        errorParts.push(`Documentation: ${responseData.documentation_url}`);
+      }
+
+      throw new Error(errorParts.join('. '));
     }
 
     const data = await response.json();
@@ -62,42 +85,53 @@ class GitHubActionsAPI {
         failedJobs.map(job => this.getJobDetails(orgName, repoName, job.id))
       );
 
-      return detailedJobs.filter(Boolean).map(job => ({
-        name: job.name,
-        steps: job.steps.filter(step => step.conclusion === 'failure').map(step => ({
-          name: step.name,
-          number: step.number,
-          error: step.completed_at ? 'Failed' : 'Timeout or canceled'
-        }))
-      }));
+      return {
+        failureDetails: detailedJobs.filter(Boolean).map(job => ({
+          name: job.name,
+          steps: job.steps.filter(step => step.conclusion === 'failure').map(step => ({
+            name: step.name,
+            number: step.number,
+            error: step.completed_at ? 'Failed' : 'Timeout or canceled'
+          }))
+        })),
+        // Return all job IDs to be used for annotations
+        jobIds: jobs.jobs.map(job => job.id)
+      };
     } catch (error) {
       console.warn(`Failed to fetch run details for ${runId}:`, error);
-      return [];
+      return { failureDetails: [], jobIds: [] };
     }
   }
 
-  async getRunAnnotations(orgName, repoName, runId) {
+  async getRunAnnotations(orgName, repoName, jobIds = []) {
     try {
-      const annotations = await this.fetchWithRateLimit(
-        `${this.baseUrl}/repos/${orgName}/${repoName}/actions/runs/${runId}/annotations`,
-        {
-          headers: {
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        }
-      );
-      return annotations.map(annotation => ({
-        level: annotation.annotation_level,
-        message: annotation.message,
-        title: annotation.title,
-        file: annotation.path,
-        line: annotation.start_line
-      }));
-    } catch (error) {
-      //console.warn(`Failed to fetch annotations for run ${runId}:`, error);
+      const allAnnotations = [];
 
+      // Fetch annotations for each job through the check-runs endpoint
+      for (const jobId of jobIds) {
+        try {
+          const jobAnnotations = await this.fetchWithRateLimit(
+            `${this.baseUrl}/repos/${orgName}/${repoName}/check-runs/${jobId}/annotations`
+          );
+
+          const mappedAnnotations = jobAnnotations.map(annotation => ({
+            level: annotation.annotation_level,
+            message: annotation.message,
+            title: annotation.title,
+            file: annotation.path,
+            line: annotation.start_line
+          }));
+
+          allAnnotations.push(...mappedAnnotations);
+        } catch (error) {
+          console.warn(`Failed to fetch annotations for job ${jobId}:`, error);
+        }
+      }
+
+      return allAnnotations;
+    } catch (error) {
       // Improved check for 404 errors and ensure callback is triggered
-      if ((error.message.includes('GitHub API Error') || error.message.includes('404') || error.message.includes('Not Found')) && !this.hasShownScopeWarning) {
+      if ((error.message.includes('GitHub API Error') || error.message.includes('403') || error.message.includes('Not Found')) && !this.hasShownScopeWarning) {
         this.hasShownScopeWarning = true;
         console.log('Detected missing scope for annotations, showing warning');
 
@@ -124,19 +158,25 @@ class GitHubActionsAPI {
           const runs = await this.fetchWithRateLimit(
             `${this.baseUrl}/repos/${orgName}/${repoName}/actions/workflows/${workflow.id}/runs?per_page=1`
           );
-          if (!runs.workflow_runs[0]) return null;
+          if (!runs.workflow_runs[0]) {
+            return null;
+          }
 
           const lastRun = runs.workflow_runs[0];
-          const [failureDetails, annotations] = await Promise.all([
-            lastRun.conclusion === 'failure' ? this.getRunDetails(orgName, repoName, lastRun.id) : [],
-            this.getRunAnnotations(orgName, repoName, lastRun.id)
-          ]);
+          const runDetails = await this.getRunDetails(orgName, repoName, lastRun.id);
+
+          // Use the jobIds from runDetails to get annotations
+          const annotations = await this.getRunAnnotations(
+            orgName,
+            repoName,
+            runDetails.jobIds
+          );
 
           return {
             workflowName: workflow.name,
             lastRun: {
               ...lastRun,
-              failureDetails,
+              failureDetails: runDetails.failureDetails,
               annotations
             }
           };

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background Circle -->
+  <circle cx="32" cy="32" r="30" fill="#2188ff" />
+
+  <!-- GitHub Workflow/Actions Icon (stylized) -->
+  <path d="M32 16L20 24V40L32 48L44 40V24L32 16Z" fill="white" />
+
+  <!-- Dashboard bars (representing stats/data) -->
+  <rect x="24" y="30" width="4" height="8" fill="#0366d6" />
+  <rect x="30" y="26" width="4" height="12" fill="#0366d6" />
+  <rect x="36" y="28" width="4" height="10" fill="#0366d6" />
+</svg>
