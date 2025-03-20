@@ -529,7 +529,7 @@ class Dashboard {
     if (prs.length === 0) {
       prList.innerHTML = `
         <div class="text-gray-500 dark:text-gray-400 italic">
-          No open pull requests found. Either there are none, the filter returns none, or the token might need 'repo' permissions.
+          No open pull requests found. Either there are none, the filter returns none (click "Clear filters"), or the token might need 'repo' permissions.
         </div>`;
       return;
     }
