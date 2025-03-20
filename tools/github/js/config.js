@@ -15,16 +15,46 @@ export const config = {
   })()
 };
 
+// Create a unified storage for dashboard configurations
+export function saveDashboardConfig(configObj) {
+  localStorage.setItem('gh-dashboard-config', JSON.stringify(configObj));
+}
+
+export function getDashboardConfig() {
+  try {
+    const saved = localStorage.getItem('gh-dashboard-config');
+    return saved ? JSON.parse(saved) : {};
+  } catch (e) {
+    console.warn('Failed to parse dashboard config', e);
+    return {};
+  }
+}
+
 export function getConfig() {
   // Check URL parameters first (they take precedence)
   const params = new URLSearchParams(window.location.search);
   const urlToken = params.get('token');
   const urlOrg = params.get('org');
 
-  // If no URL token and no env token, we'll return undefined which will trigger the error message
+  // Check localStorage next
+  const savedConfig = getDashboardConfig();
+
+  // Determine final values with URL params taking highest precedence
+  const token = urlToken || savedConfig.token || config.token;
+  const orgName = urlOrg || savedConfig.orgName || config.defaultOrg;
+
+  // Save the determined values to localStorage if they came from URL
+  if (urlToken || urlOrg) {
+    saveDashboardConfig({
+      ...savedConfig,
+      token: urlToken || savedConfig.token,
+      orgName: urlOrg || savedConfig.orgName
+    });
+  }
+
   return {
-    token: urlToken || config.token,
-    orgName: urlOrg || config.defaultOrg
+    token,
+    orgName
   };
 }
 

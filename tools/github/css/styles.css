@@ -122,3 +122,53 @@ button[data-filter-type="labels"].filter-active:hover {
 #statsToggle:hover svg {
   @apply text-gray-700 dark: text-gray-300;
 }
+
+/* Progressive loading styles */
+.pr-loading .animate-pulse {
+  background-color: #e5e7eb;
+}
+
+.dark .pr-loading .animate-pulse {
+  background-color: #374151;
+}
+
+/* Transition effects for smoother updates */
+.pr-labels,
+.pr-review-state,
+.pr-assignees {
+  transition: opacity 0.3s ease;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Actions dashboard filter styles */
+button[data-filter-type="status"].filter-active,
+button[data-filter-type="annotations"].filter-active {
+  border: 2px solid rgb(59, 130, 246);
+  background-color: rgb(219, 234, 254);
+  color: rgb(30, 64, 175);
+}
+
+.dark button[data-filter-type="status"].filter-active,
+.dark button[data-filter-type="annotations"].filter-active {
+  border-color: rgb(96, 165, 250);
+  background-color: rgb(30, 58, 138);
+  color: rgb(191, 219, 254);
+}
+
+/* Status filter indicators */
+.status-filter .w-2 {
+  margin-right: 0.25rem;
+}

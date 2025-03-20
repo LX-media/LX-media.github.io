@@ -288,23 +288,6 @@
                     </button>
                   </div>
 
-                  <!-- Label filters section -->
-                  <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm text-gray-600 dark:text-gray-400"
-                        >Labels</span
-                      >
-                      <button
-                        id="labelOperatorToggle"
-                        class="hidden px-2 py-1 text-xs font-medium bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded transition-colors"
-                        title="Click to toggle between AND/OR for label filters"
-                      >
-                        OR
-                      </button>
-                    </div>
-                    <div class="flex flex-wrap gap-2" id="labelFilters"></div>
-                  </div>
-
                   <!-- Review state filters -->
                   <div class="flex flex-wrap gap-2">
                     <span class="text-sm text-gray-600 dark:text-gray-400"
@@ -333,8 +316,24 @@
                     </button>
                   </div>
 
-                  <!-- Label filters (dynamically populated) -->
-                  <div class="flex flex-wrap gap-2" id="labelFilters"></div>
+                  <!-- Label filters section -->
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm text-gray-600 dark:text-gray-400"
+                        >Labels</span
+                      >
+                      <button
+                        id="labelOperatorToggle"
+                        class="hidden px-2 py-1 text-xs font-medium bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded transition-colors"
+                        title="Click to toggle between AND/OR for label filters"
+                      >
+                        OR
+                      </button>
+                    </div>
+
+                    <!-- Label filters (dynamically populated) -->
+                    <div class="flex flex-wrap gap-2" id="labelFilters"></div>
+                  </div>
                 </div>
               </div>
             </div>

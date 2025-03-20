@@ -6,13 +6,24 @@ class ActionsDashboard {
   constructor() {
     this.setupDarkMode();
 
-    // Get token from querystring if present
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const { orgName } = getConfig();
-
+    const { token, orgName } = getConfig();
     this.orgName = orgName;
     this.token = token;
+
+    // Initialize filter state
+    this.activeFilters = {
+      status: new Set(),
+      annotations: new Set()
+    };
+    this.searchQuery = '';
+    this.allWorkflows = [];
+    this.storageKey = `gh-dashboard-actions-filters-${orgName}`;
+
+    // Update configuration status indicators
+    this.updateConfigStatus(orgName, !!token);
+
+    // Restore saved filters
+    this.loadSavedFilters();
 
     if (!this.token) {
       this.showError(
@@ -40,6 +51,122 @@ class ActionsDashboard {
     };
 
     this.initialize();
+    this.setupEventListeners();
+  }
+
+  updateConfigStatus(orgName, hasToken) {
+    // Organization status
+    const orgIndicator = document.getElementById('orgStatusIndicator');
+    const orgValue = document.getElementById('orgStatusValue');
+
+    orgIndicator.innerHTML = orgName ?
+      '<svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>' :
+      '<svg class="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>';
+
+    orgValue.textContent = orgName || 'Not set';
+    orgIndicator.className = `w-4 h-4 rounded-full ${orgName ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'} flex items-center justify-center`;
+
+    // Token status
+    const tokenIndicator = document.getElementById('tokenStatusIndicator');
+    tokenIndicator.innerHTML = hasToken ?
+      '<svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>' :
+      '<svg class="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>';
+    tokenIndicator.className = `w-4 h-4 rounded-full ${hasToken ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'} flex items-center justify-center`;
+  }
+
+  loadSavedFilters() {
+    try {
+      const savedFilters = localStorage.getItem(this.storageKey);
+      if (savedFilters) {
+        const parsed = JSON.parse(savedFilters);
+        this.activeFilters = {
+          status: new Set(parsed.status || []),
+          annotations: new Set(parsed.annotations || [])
+        };
+        this.searchQuery = parsed.searchQuery || '';
+      }
+    } catch (error) {
+      console.warn('Failed to load saved filters:', error);
+    }
+  }
+
+  saveFilters() {
+    try {
+      const filtersToSave = {
+        status: Array.from(this.activeFilters.status),
+        annotations: Array.from(this.activeFilters.annotations),
+        searchQuery: this.searchQuery
+      };
+      localStorage.setItem(this.storageKey, JSON.stringify(filtersToSave));
+    } catch (error) {
+      console.warn('Failed to save filters:', error);
+    }
+  }
+
+  setupEventListeners() {
+    // Filter click handlers
+    document.addEventListener('click', (e) => {
+      const filterBtn = e.target.closest('[data-filter-type]');
+      if (!filterBtn) {
+        return;
+      }
+
+      const type = filterBtn.dataset.filterType;
+      const value = filterBtn.dataset.filterValue;
+
+      if (this.activeFilters[type].has(value)) {
+        this.activeFilters[type].delete(value);
+        filterBtn.classList.remove('filter-active');
+      } else {
+        this.activeFilters[type].add(value);
+        filterBtn.classList.add('filter-active');
+      }
+
+      this.saveFilters();
+      this.applyFiltersAndRender();
+    });
+
+    // Search input
+    const searchInput = document.getElementById('workflowSearch');
+    if (searchInput) {
+      searchInput.value = this.searchQuery;
+      searchInput.addEventListener('input', (e) => {
+        this.searchQuery = e.target.value;
+        this.saveFilters();
+        this.applyFiltersAndRender();
+      });
+    }
+
+    // Clear filters button
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    if (clearFiltersBtn) {
+      clearFiltersBtn.addEventListener('click', () => {
+        this.clearFilters();
+      });
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshActions');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.loadActionsMatrix(true);
+      });
+    }
+  }
+
+  clearFilters() {
+    this.activeFilters.status.clear();
+    this.activeFilters.annotations.clear();
+    this.searchQuery = '';
+
+    // Update UI
+    document.getElementById('workflowSearch').value = '';
+    document.querySelectorAll('[data-filter-type]').forEach(btn => {
+      btn.classList.remove('filter-active');
+    });
+
+    this.saveFilters();
+    this.applyFiltersAndRender();
   }
 
   setupDarkMode() {
@@ -69,6 +196,9 @@ class ActionsDashboard {
       document.title = `${org.name || this.orgName} - GitHub Actions Dashboard`;
 
       await this.loadActionsMatrix();
+
+      // Apply saved filters on initial load
+      this.updateFilterButtonState();
     } catch (error) {
       this.showError("Is the token set correctly?\n" + error.stack);
     }
@@ -82,8 +212,7 @@ class ActionsDashboard {
     console.log("Showing error message:", message);
   }
 
-  async loadActionsMatrix() {
-    const repos = await this.github.getActiveRepositories(this.orgName);
+  async loadActionsMatrix(forceRefresh = false) {
     const matrix = document.getElementById('actionsMatrix');
 
     // Show loading state
@@ -101,40 +230,163 @@ class ActionsDashboard {
       </div>
     `;
 
-    const reposWithActions = await Promise.all(
-      repos.map(async repo => {
-        const workflows = await this.actions.getRepositoryWorkflows(this.orgName, repo.name);
-        return {
-          name: repo.name,
-          workflows
-        };
-      })
-    );
+    try {
+      const repos = await this.github.getActiveRepositories(this.orgName);
 
-    matrix.innerHTML = reposWithActions
-      .filter(repo => repo.workflows.length > 0)
-      .map(repo => this.renderRepoWorkflows(repo))
-      .join('');
+      const reposWithActions = await Promise.all(
+        repos.map(async repo => {
+          const workflows = await this.actions.getRepositoryWorkflows(this.orgName, repo.name);
+          return {
+            name: repo.name,
+            workflows
+          };
+        })
+      );
 
-    this.updateLastFetchTime();
+      // Store all workflows for filtering
+      this.allWorkflows = reposWithActions.filter(repo => repo.workflows.length > 0);
+
+      // Apply filters and render
+      this.applyFiltersAndRender();
+
+      this.updateLastFetchTime();
+    } catch (error) {
+      matrix.innerHTML = `
+        <div class="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 p-4 rounded">
+          <p class="font-bold">Error loading workflows:</p>
+          <p>${error.message}</p>
+        </div>
+      `;
+    }
+  }
+
+  applyFiltersAndRender() {
+    const matrix = document.getElementById('actionsMatrix');
+    let filteredWorkflows = [...this.allWorkflows];
+
+    // Keep track of total count for metrics
+    let totalWorkflowCount = 0;
+    this.allWorkflows.forEach(repo => {
+      totalWorkflowCount += repo.workflows.length;
+    });
+
+    // Filter repositories
+    filteredWorkflows = filteredWorkflows.map(repo => {
+      const filteredRepo = {
+        name: repo.name,
+        workflows: [...repo.workflows]
+      };
+
+      // Filter by status
+      if (this.activeFilters.status.size > 0) {
+        filteredRepo.workflows = filteredRepo.workflows.filter(workflow => {
+          const status = workflow.lastRun.status;
+          const conclusion = workflow.lastRun.conclusion || '';
+
+          // For completed workflows, check the conclusion
+          if (status === 'completed') {
+            return this.activeFilters.status.has(conclusion);
+          }
+
+          // For non-completed workflows, check the status
+          return this.activeFilters.status.has(status);
+        });
+      }
+
+      // Filter by annotations
+      if (this.activeFilters.annotations.has('true')) {
+        filteredRepo.workflows = filteredRepo.workflows.filter(workflow => {
+          const hasAnnotations = Array.isArray(workflow.lastRun.annotations) &&
+            workflow.lastRun.annotations.length > 0;
+          return hasAnnotations;
+        });
+      }
+
+      // Filter by search query
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase();
+        filteredRepo.workflows = filteredRepo.workflows.filter(workflow =>
+          workflow.workflowName.toLowerCase().includes(query) ||
+          repo.name.toLowerCase().includes(query)
+        );
+      }
+
+      return filteredRepo;
+    });
+
+    // Remove empty repositories
+    filteredWorkflows = filteredWorkflows.filter(repo => repo.workflows.length > 0);
+
+    // Count filtered workflows for metrics
+    let filteredWorkflowCount = 0;
+    filteredWorkflows.forEach(repo => {
+      filteredWorkflowCount += repo.workflows.length;
+    });
+
+    // Update filter counts
+    this.updateFilterCounts(filteredWorkflowCount, totalWorkflowCount);
+
+    // Render the filtered workflows
+    if (filteredWorkflows.length === 0) {
+      matrix.innerHTML = `
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <p class="text-gray-500 dark:text-gray-400 text-center">No workflows match the current filters.</p>
+        </div>
+      `;
+    } else {
+      matrix.innerHTML = filteredWorkflows.map(repo => this.renderRepoWorkflows(repo)).join('');
+    }
+  }
+
+  updateFilterCounts(filtered, total) {
+    const filterCountsElement = document.getElementById('filterCounts');
+    const activeFilterCount =
+      this.activeFilters.status.size +
+      this.activeFilters.annotations.size +
+      (this.searchQuery ? 1 : 0);
+
+    filterCountsElement.textContent = `Showing ${filtered} of ${total} workflows${activeFilterCount > 0 ? ` (${activeFilterCount} filters active)` : ''
+      }`;
+  }
+
+  updateFilterButtonState() {
+    // Update status filter buttons
+    this.activeFilters.status.forEach(status => {
+      const button = document.querySelector(`[data-filter-type="status"][data-filter-value="${status}"]`);
+      if (button) {
+        button.classList.add('filter-active');
+      }
+    });
+
+    // Update annotations filter button
+    if (this.activeFilters.annotations.has('true')) {
+      const button = document.querySelector('[data-filter-type="annotations"][data-filter-value="true"]');
+      if (button) {
+        button.classList.add('filter-active');
+      }
+    }
+
+    // Update search input
+    const searchInput = document.getElementById('workflowSearch');
+    if (searchInput) {
+      searchInput.value = this.searchQuery;
+    }
   }
 
   renderRepoWorkflows(repo) {
     return `
       <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">${repo.name}</h2>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">${repo.name}</h2>
+          <span class="text-sm text-gray-500 dark:text-gray-400">${repo.workflows.length} workflow${repo.workflows.length !== 1 ? 's' : ''}</span>
+        </div>
         <div class="space-y-3">
           ${repo.workflows.map(workflow => {
       const status = workflow.lastRun.status;
       const conclusion = workflow.lastRun.conclusion;
       const color = this.actions.getStatusColor(status, conclusion);
       const statusClass = `bg-${color}-100 dark:bg-${color}-900 text-${color}-800 dark:text-${color}-200`;
-
-      // Debug logging
-      // console.log('Workflow:', workflow.workflowName);
-      // console.log('Annotations:', workflow.lastRun.annotations);
       const hasAnnotations = Array.isArray(workflow.lastRun.annotations) && workflow.lastRun.annotations.length > 0;
-      // console.log('Has annotations:', hasAnnotations);
 
       return `
               <div class="flex flex-col gap-2">

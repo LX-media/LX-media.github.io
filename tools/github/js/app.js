@@ -1,6 +1,6 @@
 import GitHubAPI from './githubApi.js';
 import { FilterStore } from './filterStore.js';
-import { getConfig } from './config.js';
+import { getConfig, saveDashboardConfig } from './config.js';
 
 class Dashboard {
   constructor() {
@@ -16,13 +16,16 @@ class Dashboard {
     this.orgName = orgName;
     this.token = token;
 
+    // Save the config to localStorage for persistence
+    saveDashboardConfig({ token, orgName });
+
     // Add cache duration property
-    this.cacheDuration = parseInt(localStorage.getItem('prCacheDuration')) || 60; // Default 60 minutes
+    this.cacheDuration = parseInt(localStorage.getItem('gh-dashboard-pr-cache-duration')) || 60; // Default 60 minutes
     // Make storage key organization-aware
-    this.storageKey = `github-dashboard-pr-cache-${orgName}`;
+    this.storageKey = `gh-dashboard-pr-cache-${orgName}`;
 
     // Add repos per page configuration
-    this.reposPerPage = parseInt(localStorage.getItem('reposPerPage')) || 20;
+    this.reposPerPage = parseInt(localStorage.getItem('gh-dashboard-repos-per-page')) || 20;
 
     // Update configuration status indicators
     this.updateConfigStatus(orgName, !!token);
@@ -106,7 +109,7 @@ class Dashboard {
     const border = 'border-b border-gray-200 dark:border-gray-700';
 
     // Restore saved state
-    const isExpanded = localStorage.getItem('statsExpanded') === 'true';
+    const isExpanded = localStorage.getItem('gh-dashboard-statsExpanded') === 'true';
     if (isExpanded) {
       content.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
@@ -126,7 +129,7 @@ class Dashboard {
       }
 
       // Save state
-      localStorage.setItem('statsExpanded', isHidden);
+      localStorage.setItem('gh-dashboard-statsExpanded', isHidden);
     });
   }
 
@@ -249,7 +252,7 @@ class Dashboard {
       const value = parseInt(e.target.value);
       if (value > 0) {
         this.cacheDuration = value;
-        localStorage.setItem('prCacheDuration', value);
+        localStorage.setItem('gh-dashboard-pr-cache-duration', value);
       }
     });
 
@@ -258,7 +261,7 @@ class Dashboard {
       const value = parseInt(e.target.value);
       if (value > 0) {
         this.reposPerPage = value;
-        localStorage.setItem('reposPerPage', value);
+        localStorage.setItem('gh-dashboard-repos-per-page', value);
         this.github.reposPerPage = value;
         this.loadRepositories();
       }
@@ -526,7 +529,7 @@ class Dashboard {
     if (prs.length === 0) {
       prList.innerHTML = `
         <div class="text-gray-500 dark:text-gray-400 italic">
-          No open pull requests found. Either there are none, or the token might need 'repo' permissions.
+          No open pull requests found. Either there are none, the filter returns none, or the token might need 'repo' permissions.
         </div>`;
       return;
     }

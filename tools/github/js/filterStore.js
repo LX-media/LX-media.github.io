@@ -1,6 +1,6 @@
 export class FilterStore {
   constructor() {
-    this.storageKey = 'github-dashboard-filters';
+    this.storageKey = 'gh-dashboard-filters';
     this.filters = this.loadFilters();
   }
 

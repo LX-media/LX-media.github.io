@@ -29,51 +29,213 @@
   <body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
     <div class="container mx-auto px-4 py-8">
       <header class="mb-8">
-        <div class="flex items-center gap-4 mb-4">
-          <h1
-            class="text-3xl font-bold text-gray-900 dark:text-white"
-            id="orgName"
-          >
-            Loading...
-          </h1>
-          <a
-            href="index.html"
-            id="mainPageLink"
-            class="text-blue-600 dark:text-blue-400 hover:underline"
-            >← Back to PRs</a
-          >
-          <!-- Add dark mode toggle -->
-          <button
-            id="darkModeToggle"
-            class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 ml-auto"
-          >
-            <svg
-              class="w-6 h-6 dark:hidden"
-              fill="currentColor"
-              viewBox="0 0 20 20"
+        <div class="flex justify-between items-start mb-4">
+          <div class="flex items-center gap-4 mb-2">
+            <h1
+              class="text-3xl font-bold text-gray-900 dark:text-white"
+              id="orgName"
             >
-              <path
-                d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
-              />
-            </svg>
-            <svg
-              class="w-6 h-6 hidden dark:block"
-              fill="currentColor"
-              viewBox="0 0 20 20"
+              Loading...
+            </h1>
+            <a
+              href="index.html"
+              id="mainPageLink"
+              class="text-blue-600 dark:text-blue-400 hover:underline"
+              >← Back to PRs</a
             >
-              <path
-                d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
-              />
-            </svg>
-          </button>
+          </div>
+
+          <!-- Right side with config status and dark mode -->
+          <div class="flex flex-col items-end gap-4">
+            <!-- Config Status Indicators -->
+            <div class="flex items-start gap-6">
+              <!-- Organization Status -->
+              <div class="flex flex-col items-center">
+                <span class="text-xs text-gray-600 dark:text-gray-400"
+                  >Organization</span
+                >
+                <span
+                  id="orgStatusIndicator"
+                  class="my-2 w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center"
+                ></span>
+                <span
+                  id="orgStatusValue"
+                  class="text-xs text-gray-500 dark:text-gray-400"
+                ></span>
+              </div>
+              <!-- Token Status -->
+              <div class="flex flex-col items-center">
+                <span class="text-xs text-gray-600 dark:text-gray-400"
+                  >Token</span
+                >
+                <span
+                  id="tokenStatusIndicator"
+                  class="my-2 w-4 h-4 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center"
+                ></span>
+              </div>
+              <!-- Dark Mode Toggle -->
+              <button
+                id="darkModeToggle"
+                class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+              >
+                <svg
+                  class="w-6 h-6 dark:hidden"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+                  />
+                </svg>
+                <svg
+                  class="w-6 h-6 hidden dark:block"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
-        <p class="text-sm text-gray-500 dark:text-gray-400" id="lastUpdate"></p>
       </header>
 
       <div
         id="errorMessage"
         class="hidden mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded"
       ></div>
+
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-gray-500 dark:text-gray-400" id="lastUpdate"></p>
+        <div
+          id="filterCounts"
+          class="text-sm text-gray-500 dark:text-gray-400"
+        ></div>
+      </div>
+
+      <!-- Add filter controls -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+        <div class="flex flex-col gap-4">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-4">
+              <h2 class="text-lg font-medium text-gray-900 dark:text-white">
+                Filters
+              </h2>
+              <button
+                id="refreshActions"
+                class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+                title="Refresh actions list"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
+            <button
+              id="clearFilters"
+              class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+            >
+              Clear Filters
+            </button>
+          </div>
+
+          <!-- Filter groups -->
+          <div class="space-y-3">
+            <!-- Workflow status filters -->
+            <div class="flex flex-wrap gap-2 items-center">
+              <span class="text-sm text-gray-600 dark:text-gray-400"
+                >Status:</span
+              >
+              <button
+                data-filter-type="status"
+                data-filter-value="success"
+                class="status-filter px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+              >
+                <span
+                  class="w-2 h-2 inline-block rounded-full bg-green-500 mr-1"
+                ></span>
+                Success
+              </button>
+              <button
+                data-filter-type="status"
+                data-filter-value="failure"
+                class="status-filter px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+              >
+                <span
+                  class="w-2 h-2 inline-block rounded-full bg-red-500 mr-1"
+                ></span>
+                Failure
+              </button>
+              <button
+                data-filter-type="status"
+                data-filter-value="cancelled"
+                class="status-filter px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+              >
+                <span
+                  class="w-2 h-2 inline-block rounded-full bg-gray-500 mr-1"
+                ></span>
+                Cancelled
+              </button>
+              <button
+                data-filter-type="status"
+                data-filter-value="skipped"
+                class="status-filter px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+              >
+                <span
+                  class="w-2 h-2 inline-block rounded-full bg-gray-500 mr-1"
+                ></span>
+                Skipped
+              </button>
+              <button
+                data-filter-type="status"
+                data-filter-value="in_progress"
+                class="status-filter px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+              >
+                <span
+                  class="w-2 h-2 inline-block rounded-full bg-yellow-500 mr-1"
+                ></span>
+                In Progress
+              </button>
+            </div>
+
+            <!-- Has annotations filter -->
+            <div class="flex flex-wrap gap-2 items-center">
+              <span class="text-sm text-gray-600 dark:text-gray-400"
+                >Special:</span
+              >
+              <button
+                data-filter-type="annotations"
+                data-filter-value="true"
+                class="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded"
+              >
+                Has Annotations
+              </button>
+            </div>
+
+            <!-- Search input -->
+            <div class="flex gap-2">
+              <input
+                type="search"
+                id="workflowSearch"
+                placeholder="Search workflows by name or repository..."
+                class="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="grid gap-6" id="actionsMatrix">
         <!-- Content will be dynamically populated -->

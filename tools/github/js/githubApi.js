@@ -7,7 +7,7 @@ class GitHubAPI {
     this.reviewStateCache = new Map();
     this.rateLimitWarningThreshold = 100; // Warn when remaining calls are below this
     this.onRateLimitWarning = () => { }; // Callback for rate limit warnings
-    this.reposPerPage = parseInt(localStorage.getItem('reposPerPage')) || 20;
+    this.reposPerPage = parseInt(localStorage.getItem('gh-dashboard-repos-per-page')) || 20;
     this.userCache = new Map();
     this.userCacheTimeout = 30 * 24 * 60 * 60 * 1000; // 30 days
   }
