@@ -169,15 +169,23 @@ class Dashboard {
     const hideDependabotBtn = document.getElementById('hideDependabotBtn');
     const hideDraftBtn = document.getElementById('hideDraftBtn');
 
+    // Update button initial states with proper classes
+    this.updateFilterButtonClass(hideRenovateBtn, this.hideRenovate);
+    this.updateFilterButtonClass(hideDependabotBtn, this.hideDependabot);
+    this.updateFilterButtonClass(hideDraftBtn, this.filterStore.filters.hideDraft);
+    hideDraftBtn.textContent = this.filterStore.filters.hideDraft ? 'Show Draft PRs' : 'Hide Draft PRs';
+
     hideRenovateBtn.addEventListener('click', () => {
       this.hideRenovate = !this.hideRenovate;
       hideRenovateBtn.textContent = this.hideRenovate ? 'Show Renovate PRs' : 'Hide Renovate PRs';
+      this.updateFilterButtonClass(hideRenovateBtn, this.hideRenovate);
       this.renderPullRequests();
     });
 
     hideDependabotBtn.addEventListener('click', () => {
       this.hideDependabot = !this.hideDependabot;
       hideDependabotBtn.textContent = this.hideDependabot ? 'Show Dependabot PRs' : 'Hide Dependabot PRs';
+      this.updateFilterButtonClass(hideDependabotBtn, this.hideDependabot);
       this.renderPullRequests();
     });
 
@@ -186,6 +194,7 @@ class Dashboard {
       const newState = !this.filterStore.filters.hideDraft;
       this.filterStore.updateFilter('hideDraft', newState);
       hideDraftBtn.textContent = newState ? 'Show Draft PRs' : 'Hide Draft PRs';
+      this.updateFilterButtonClass(hideDraftBtn, newState);
       this.renderPullRequests();
     });
     hideDraftBtn.textContent = this.filterStore.filters.hideDraft ? 'Show Draft PRs' : 'Hide Draft PRs';
@@ -278,6 +287,22 @@ class Dashboard {
     });
   }
 
+  // Add a helper method to update button classes
+  updateFilterButtonClass(button, isActive) {
+    // Remove all possible classes first
+    button.classList.remove(
+      'bg-gray-200', 'hover:bg-gray-300', 'dark:bg-gray-700', 'dark:hover:bg-gray-600', 'dark:text-gray-200',
+      'bg-blue-100', 'hover:bg-blue-200', 'dark:bg-blue-800', 'dark:hover:bg-blue-700', 'text-blue-700', 'dark:text-blue-300'
+    );
+
+    // Add appropriate classes based on state
+    if (isActive) {
+      button.classList.add('bg-blue-100', 'hover:bg-blue-200', 'dark:bg-blue-800', 'dark:hover:bg-blue-700', 'text-blue-700', 'dark:text-blue-300');
+    } else {
+      button.classList.add('bg-gray-200', 'hover:bg-gray-300', 'dark:bg-gray-700', 'dark:hover:bg-gray-600', 'dark:text-gray-200');
+    }
+  }
+
   resetFilters() {
     const savedFilters = this.filterStore.filters;
     this.hideRenovate = savedFilters.hideRenovate;
@@ -294,6 +319,14 @@ class Dashboard {
     document.querySelectorAll('.filter-active').forEach(el => {
       el.classList.remove('filter-active');
     });
+
+    // Reset button styles
+    const hideRenovateBtn = document.getElementById('hideRenovateBtn');
+    const hideDependabotBtn = document.getElementById('hideDependabotBtn');
+    const hideDraftBtn = document.getElementById('hideDraftBtn');
+    this.updateFilterButtonClass(hideRenovateBtn, this.hideRenovate);
+    this.updateFilterButtonClass(hideDependabotBtn, this.hideDependabot);
+    this.updateFilterButtonClass(hideDraftBtn, this.filterStore.filters.hideDraft);
 
     this.renderPullRequests();
   }
