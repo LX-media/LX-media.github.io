@@ -150,6 +150,7 @@ class GitHubAPI {
             color: label.color
           })),
           reviewState,
+          isDraft: pr.draft, // Add the draft status from the GitHub API
           reviews: reviews.map(review => ({
             state: review.state,
             user: { id: review.user.id },

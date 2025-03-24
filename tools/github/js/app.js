@@ -167,6 +167,7 @@ class Dashboard {
   setupEventListeners() {
     const hideRenovateBtn = document.getElementById('hideRenovateBtn');
     const hideDependabotBtn = document.getElementById('hideDependabotBtn');
+    const hideDraftBtn = document.getElementById('hideDraftBtn');
 
     hideRenovateBtn.addEventListener('click', () => {
       this.hideRenovate = !this.hideRenovate;
@@ -179,6 +180,15 @@ class Dashboard {
       hideDependabotBtn.textContent = this.hideDependabot ? 'Show Dependabot PRs' : 'Hide Dependabot PRs';
       this.renderPullRequests();
     });
+
+    // Setup Draft PR filter button
+    hideDraftBtn.addEventListener('click', () => {
+      const newState = !this.filterStore.filters.hideDraft;
+      this.filterStore.updateFilter('hideDraft', newState);
+      hideDraftBtn.textContent = newState ? 'Show Draft PRs' : 'Hide Draft PRs';
+      this.renderPullRequests();
+    });
+    hideDraftBtn.textContent = this.filterStore.filters.hideDraft ? 'Show Draft PRs' : 'Hide Draft PRs';
 
     const sortPRsBtn = document.getElementById('sortPRsBtn');
     sortPRsBtn.addEventListener('click', () => {
@@ -489,6 +499,12 @@ class Dashboard {
         return pr.user.login !== 'dependabot[bot]';
       });
     }
+    // Filter out draft PRs if the filter is active
+    if (this.filterStore.filters.hideDraft) {
+      prs = prs.filter((pr) => {
+        return !pr.isDraft;
+      });
+    }
 
     // Apply filters
     if (this.searchQuery) {
@@ -562,10 +578,15 @@ class Dashboard {
       'PENDING': 'border-yellow-500'
     }[pr.reviewState] || 'border-gray-500';
 
+    // Add draft status styling
+    const draftClass = pr.isDraft ? 'opacity-70' : '';
+    const titleClass = pr.isDraft ? 'text-gray-500 dark:text-gray-400' : 'text-blue-600 dark:text-blue-400';
+
     return `
-      <div class="border-l-4 ${borderColor} pl-4">
+      <div class="border-l-4 ${borderColor} pl-4 ${draftClass}">
         <div class="flex items-center gap-2">
-          <a href="${pr.html_url}" target="_blank" class="text-lg font-medium text-blue-600 dark:text-blue-400 hover:underline truncate">
+          ${pr.isDraft ? '<span class="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded">DRAFT</span>' : ''}
+          <a href="${pr.html_url}" target="_blank" class="text-lg font-medium ${titleClass} hover:underline truncate">
             ${pr.title}
           </a>
         </div>
