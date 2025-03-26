@@ -311,11 +311,26 @@ class ActionsDashboard {
         );
       }
 
+      // Sort workflows within each repository by date, newest first
+      filteredRepo.workflows.sort((a, b) => {
+        const dateA = new Date(a.lastRun.created_at || a.lastRun.updated_at);
+        const dateB = new Date(b.lastRun.created_at || b.lastRun.updated_at);
+        return dateB - dateA;
+      });
+
       return filteredRepo;
     });
 
     // Remove empty repositories
     filteredWorkflows = filteredWorkflows.filter(repo => repo.workflows.length > 0);
+
+    // Sort repositories by their newest workflow run date, newest first
+    filteredWorkflows.sort((repoA, repoB) => {
+      // Get the newest run date from each repo's workflows
+      const newestDateA = new Date(repoA.workflows[0].lastRun.created_at || repoA.workflows[0].lastRun.updated_at);
+      const newestDateB = new Date(repoB.workflows[0].lastRun.created_at || repoB.workflows[0].lastRun.updated_at);
+      return newestDateB - newestDateA;
+    });
 
     // Count filtered workflows for metrics
     let filteredWorkflowCount = 0;
@@ -387,6 +402,7 @@ class ActionsDashboard {
       const color = this.actions.getStatusColor(status, conclusion);
       const statusClass = `bg-${color}-100 dark:bg-${color}-900 text-${color}-800 dark:text-${color}-200`;
       const hasAnnotations = Array.isArray(workflow.lastRun.annotations) && workflow.lastRun.annotations.length > 0;
+      const lastRunDate = new Date(workflow.lastRun.created_at || workflow.lastRun.updated_at);
 
       return `
               <div class="flex flex-col gap-2">
@@ -397,18 +413,31 @@ class ActionsDashboard {
                        class="text-blue-600 dark:text-blue-400 hover:underline">
                       ${workflow.workflowName}
                     </a>
+                    ${hasAnnotations ? `
+                      <span class="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-full">
+                        ${workflow.lastRun.annotations.length} annotation${workflow.lastRun.annotations.length !== 1 ? 's' : ''}
+                      </span>
+                    ` : ''}
                   </div>
                   <div class="flex items-center gap-2">
-                    <span class="px-2 py-1 text-xs rounded ${statusClass}">
-                      ${status === 'completed' ? conclusion : status}
-                    </span>
                     ${workflow.lastRun.conclusion === 'failure' ? `
                       <span class="text-sm text-red-600 dark:text-red-400 max-w-md truncate"
                             title="${this.getFailureReason(workflow.lastRun).replace(/"/g, '&quot;')}">
                         ${this.getFailureReason(workflow.lastRun).split('\n')[0]}
                       </span>
                     ` : ''}
+                    <span class="px-2 py-1 text-xs rounded ${statusClass}">
+                      ${status === 'completed' ? conclusion : status}
+                    </span>
                   </div>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                    Last run: ${lastRunDate.toLocaleString(navigator.language, {
+        dateStyle: 'medium',
+        timeStyle: 'medium'
+      })}
+                  </span>
                 </div>
                 ${hasAnnotations ? this.renderAnnotations(workflow.lastRun.annotations) : ''}
               </div>
@@ -421,18 +450,18 @@ class ActionsDashboard {
 
   renderAnnotations(annotations) {
     const warnings = annotations.filter(a => a.level === 'warning');
-    const errors = annotations.filter(a => a.level === 'error');
+    const failures = annotations.filter(a => a.level === 'failure');
 
-    if (!warnings.length && !errors.length) {
+    if (!warnings.length && !failures.length) {
       return '';
     }
 
     return `
       <div class="pl-4 text-sm space-y-2 w-full overflow-hidden text-wrap">
-        ${errors.length > 0 ? `
+        ${failures.length > 0 ? `
           <div class="text-red-600 dark:text-red-400">
-            <div class="font-medium">❌ Errors:</div>
-            ${this.renderAnnotationList(errors)}
+            <div class="font-medium">❌ Failures:</div>
+            ${this.renderAnnotationList(failures)}
           </div>
         ` : ''}
         ${warnings.length > 0 ? `
