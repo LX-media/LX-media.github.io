@@ -174,6 +174,8 @@ class GitHubActionsAPI {
 
           return {
             workflowName: workflow.name,
+            workflowState: workflow.state,
+            isEnabled: workflow.state === "active",
             lastRun: {
               ...lastRun,
               failureDetails: runDetails.failureDetails,

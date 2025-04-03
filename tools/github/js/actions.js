@@ -13,7 +13,8 @@ class ActionsDashboard {
     // Initialize filter state
     this.activeFilters = {
       status: new Set(),
-      annotations: new Set()
+      annotations: new Set(),
+      hideDisabled: new Set(['true']) // Default to hiding disabled workflows
     };
     this.searchQuery = '';
     this.allWorkflows = [];
@@ -81,7 +82,8 @@ class ActionsDashboard {
         const parsed = JSON.parse(savedFilters);
         this.activeFilters = {
           status: new Set(parsed.status || []),
-          annotations: new Set(parsed.annotations || [])
+          annotations: new Set(parsed.annotations || []),
+          hideDisabled: new Set(parsed.hideDisabled || ['true']) // Default to hiding disabled
         };
         this.searchQuery = parsed.searchQuery || '';
       }
@@ -95,6 +97,7 @@ class ActionsDashboard {
       const filtersToSave = {
         status: Array.from(this.activeFilters.status),
         annotations: Array.from(this.activeFilters.annotations),
+        hideDisabled: Array.from(this.activeFilters.hideDisabled),
         searchQuery: this.searchQuery
       };
       localStorage.setItem(this.storageKey, JSON.stringify(filtersToSave));
@@ -157,6 +160,7 @@ class ActionsDashboard {
   clearFilters() {
     this.activeFilters.status.clear();
     this.activeFilters.annotations.clear();
+    this.activeFilters.hideDisabled = new Set(['true']); // Reset to default (hiding disabled)
     this.searchQuery = '';
 
     // Update UI
@@ -164,6 +168,11 @@ class ActionsDashboard {
     document.querySelectorAll('[data-filter-type]').forEach(btn => {
       btn.classList.remove('filter-active');
     });
+    // Re-apply active class to the "Hide Disabled Workflows" button
+    const hideDisabledBtn = document.querySelector('[data-filter-type="hideDisabled"][data-filter-value="true"]');
+    if (hideDisabledBtn) {
+      hideDisabledBtn.classList.add('filter-active');
+    }
 
     this.saveFilters();
     this.applyFiltersAndRender();
@@ -302,6 +311,13 @@ class ActionsDashboard {
         });
       }
 
+      // Filter disabled workflows
+      if (this.activeFilters.hideDisabled.has('true')) {
+        filteredRepo.workflows = filteredRepo.workflows.filter(workflow => {
+          return workflow.isEnabled !== false;
+        });
+      }
+
       // Filter by search query
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase();
@@ -358,6 +374,7 @@ class ActionsDashboard {
     const activeFilterCount =
       this.activeFilters.status.size +
       this.activeFilters.annotations.size +
+      this.activeFilters.hideDisabled.size +
       (this.searchQuery ? 1 : 0);
 
     filterCountsElement.textContent = `Showing ${filtered} of ${total} workflows${activeFilterCount > 0 ? ` (${activeFilterCount} filters active)` : ''
@@ -376,6 +393,14 @@ class ActionsDashboard {
     // Update annotations filter button
     if (this.activeFilters.annotations.has('true')) {
       const button = document.querySelector('[data-filter-type="annotations"][data-filter-value="true"]');
+      if (button) {
+        button.classList.add('filter-active');
+      }
+    }
+
+    // Update hide disabled filter button
+    if (this.activeFilters.hideDisabled.has('true')) {
+      const button = document.querySelector('[data-filter-type="hideDisabled"][data-filter-value="true"]');
       if (button) {
         button.classList.add('filter-active');
       }
@@ -402,7 +427,13 @@ class ActionsDashboard {
       const color = this.actions.getStatusColor(status, conclusion);
       const statusClass = `bg-${color}-100 dark:bg-${color}-900 text-${color}-800 dark:text-${color}-200`;
       const hasAnnotations = Array.isArray(workflow.lastRun.annotations) && workflow.lastRun.annotations.length > 0;
+      const isEnabled = workflow.isEnabled !== false; // Default to true if not specified
       const lastRunDate = new Date(workflow.lastRun.created_at || workflow.lastRun.updated_at);
+
+      // Apply disabled styling
+      const workflowNameClass = isEnabled ?
+        "text-blue-600 dark:text-blue-400 hover:underline" :
+        "text-gray-500 dark:text-gray-400 hover:underline opacity-70";
 
       return `
               <div class="flex flex-col gap-2">
@@ -410,25 +441,30 @@ class ActionsDashboard {
                   <div class="flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-${color}-500"></span>
                     <a href="${workflow.lastRun.html_url}" target="_blank"
-                       class="text-blue-600 dark:text-blue-400 hover:underline">
+                       class="${workflowNameClass}">
                       ${workflow.workflowName}
                     </a>
-                    ${hasAnnotations ? `
+                    ${!isEnabled ? `
+                      <span class="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-full">
+                        disabled
+                      </span>
+                    ` : ''}
+                    ${hasAnnotations && isEnabled ? `
                       <span class="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-full">
                         ${workflow.lastRun.annotations.length} annotation${workflow.lastRun.annotations.length !== 1 ? 's' : ''}
                       </span>
                     ` : ''}
                   </div>
                   <div class="flex items-center gap-2">
-                    ${workflow.lastRun.conclusion === 'failure' ? `
+                    <span class="px-2 py-1 text-xs rounded ${statusClass}">
+                      ${status === 'completed' ? conclusion : status}
+                    </span>
+                    ${workflow.lastRun.conclusion === 'failure' && isEnabled ? `
                       <span class="text-sm text-red-600 dark:text-red-400 max-w-md truncate"
                             title="${this.getFailureReason(workflow.lastRun).replace(/"/g, '&quot;')}">
                         ${this.getFailureReason(workflow.lastRun).split('\n')[0]}
                       </span>
                     ` : ''}
-                    <span class="px-2 py-1 text-xs rounded ${statusClass}">
-                      ${status === 'completed' ? conclusion : status}
-                    </span>
                   </div>
                 </div>
                 <div class="flex justify-between items-center">
@@ -439,7 +475,7 @@ class ActionsDashboard {
       })}
                   </span>
                 </div>
-                ${hasAnnotations ? this.renderAnnotations(workflow.lastRun.annotations) : ''}
+                ${hasAnnotations && isEnabled ? this.renderAnnotations(workflow.lastRun.annotations) : ''}
               </div>
             `;
     }).join('')}
