@@ -1,8 +1,11 @@
-import GitHubAPI from './githubApi.js';
 import { FilterStore } from './filterStore.js';
-import { getConfig, saveDashboardConfig } from './config.js';
+import { BaseDashboard } from './baseDashboard.js';
+import {
+  createLoadingSkeletonList,
+  createPullRequestItem
+} from './components.js';
 
-class Dashboard {
+class Dashboard extends BaseDashboard {
   constructor() {
     // Add initialization tracking
     if (window._dashboardInitialized) {
@@ -10,50 +13,31 @@ class Dashboard {
     }
     window._dashboardInitialized = true;
 
-    this.setupDarkMode();
-
-    const { token, orgName } = getConfig();
-    this.orgName = orgName;
-    this.token = token;
-
-    // Save the config to localStorage for persistence
-    saveDashboardConfig({ token, orgName });
-
-    // Add cache duration property
-    this.cacheDuration = parseInt(localStorage.getItem('gh-dashboard-pr-cache-duration')) || 60; // Default 60 minutes
-    // Make storage key organization-aware
-    this.storageKey = `gh-dashboard-pr-cache-${orgName}`;
-
-    // Add repos per page configuration
-    this.reposPerPage = parseInt(localStorage.getItem('gh-dashboard-repos-per-page')) || 20;
-
-    // Update configuration status indicators
-    this.updateConfigStatus(orgName, !!token);
-
-    if (!this.token) {
-      this.showError(
-        'GitHub token is required. Either set GITHUB_TOKEN environment variable or add it as a URL parameter: ?token=your-token\n' +
-        'Use the token from 1password: `GITHUB_ORG_DASHBOARD_PAT dev@lx ORG`.\n\n' +
-        'Required token scopes:\n' +
-        '• repo (read-only access to repositories)\n' +
-        '• org:read (read-only access to organization data)'
-      );
+    // Call the parent constructor with PR dashboard specific options
+    const initSuccess = super({ storageKeyPrefix: 'gh-dashboard-pr-cache' });
+    if (!initSuccess) {
       return;
     }
 
-    this.github = new GitHubAPI(this.token);
+    // Add cache duration property
+    this.cacheDuration = parseInt(localStorage.getItem('gh-dashboard-pr-cache-duration')) || 60; // Default 60 minutes
+
+    // Add repos per page configuration
+    this.reposPerPage = parseInt(localStorage.getItem('gh-dashboard-repos-per-page')) || 20;
+    if (this.github) {
+      this.github.reposPerPage = this.reposPerPage;
+    }
+
     this.hideRenovate = false;
     this.hideDependabot = false;
     this.pullRequests = [];
     this.isLoadingPRs = false;
-    this.lastUpdateTime = null;
     this.sortNewest = true;
     this.activeFilters = {
       labels: new Set(),
       reviewState: new Set()
     };
     this.filterStore = new FilterStore();
-    this.searchTimeout = null;
     this.labelOperator = 'OR'; // New property for label filter operation
 
     // Restore saved filters
@@ -68,38 +52,12 @@ class Dashboard {
     this.searchQuery = savedFilters.search;
     this.labelOperator = savedFilters.labelOperator || 'OR';
 
-    // Setup rate limit warning handler
-    this.github.onRateLimitWarning = this.handleRateLimitWarning.bind(this);
-
     this.initialize();
     this.setupEventListeners();
     this.setupStatsToggle();
 
-    // Update configuration status indicators
-    this.updateConfigStatus(orgName, !!token);
-
     // Try to load cached data immediately
     this.loadCachedData();
-  }
-
-  updateConfigStatus(orgName, hasToken) {
-    // Organization status
-    const orgIndicator = document.getElementById('orgStatusIndicator');
-    const orgValue = document.getElementById('orgStatusValue');
-
-    orgIndicator.innerHTML = orgName ?
-      '<svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>' :
-      '<svg class="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>';
-
-    orgValue.textContent = orgName || 'Not set';
-    orgIndicator.className = `w-4 h-4 rounded-full ${orgName ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'} flex items-center justify-center`;
-
-    // Token status
-    const tokenIndicator = document.getElementById('tokenStatusIndicator');
-    tokenIndicator.innerHTML = hasToken ?
-      '<svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>' :
-      '<svg class="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>';
-    tokenIndicator.className = `w-4 h-4 rounded-full ${hasToken ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'} flex items-center justify-center`;
   }
 
   setupStatsToggle() {
@@ -131,24 +89,6 @@ class Dashboard {
       // Save state
       localStorage.setItem('gh-dashboard-statsExpanded', isHidden);
     });
-  }
-
-  handleRateLimitWarning({ remaining, resetTime, resetTimeMs }) {
-    const warningDiv = document.createElement('div');
-    warningDiv.className = 'fixed bottom-4 right-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100 p-4 rounded-lg shadow-lg';
-    warningDiv.innerHTML = `
-      <p>API Rate Limit Warning</p>
-      <p class="text-sm">Remaining calls: ${remaining}</p>
-      <p class="text-sm">Resets in: ${Math.ceil(resetTimeMs / 60000)} minutes</p>
-    `;
-    document.body.appendChild(warningDiv);
-    setTimeout(() => warningDiv.remove(), 5000);
-  }
-
-  showError(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    errorDiv.innerHTML = message.replace(/\n/g, '<br>');
-    errorDiv.classList.remove('hidden');
   }
 
   async initialize() {
@@ -245,8 +185,8 @@ class Dashboard {
       }, 300);
     });
 
-    // Clear filters button
-    document.getElementById('clearFilters').addEventListener('click', () => {
+    // Setup Clear filters button (using the base method)
+    this.setupClearFiltersButton(() => {
       this.filterStore.clearFilters();
       this.resetFilters();
     });
@@ -287,22 +227,6 @@ class Dashboard {
     });
   }
 
-  // Add a helper method to update button classes
-  updateFilterButtonClass(button, isActive) {
-    // Remove all possible classes first
-    button.classList.remove(
-      'bg-gray-200', 'hover:bg-gray-300', 'dark:bg-gray-700', 'dark:hover:bg-gray-600', 'dark:text-gray-200',
-      'bg-blue-100', 'hover:bg-blue-200', 'dark:bg-blue-800', 'dark:hover:bg-blue-700', 'text-blue-700', 'dark:text-blue-300'
-    );
-
-    // Add appropriate classes based on state
-    if (isActive) {
-      button.classList.add('bg-blue-100', 'hover:bg-blue-200', 'dark:bg-blue-800', 'dark:hover:bg-blue-700', 'text-blue-700', 'dark:text-blue-300');
-    } else {
-      button.classList.add('bg-gray-200', 'hover:bg-gray-300', 'dark:bg-gray-700', 'dark:hover:bg-gray-600', 'dark:text-gray-200');
-    }
-  }
-
   resetFilters() {
     const savedFilters = this.filterStore.filters;
     this.hideRenovate = savedFilters.hideRenovate;
@@ -331,42 +255,8 @@ class Dashboard {
     this.renderPullRequests();
   }
 
-  setupDarkMode() {
-    // Check system preference
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.classList.add('dark');
-    }
-
-    // Setup toggle button
-    const darkModeToggle = document.getElementById('darkModeToggle');
-    darkModeToggle.addEventListener('click', () => {
-      document.documentElement.classList.toggle('dark');
-    });
-  }
-
-  updateLastFetchTime() {
-    this.lastUpdateTime = new Date();
-    const lastUpdate = document.getElementById('lastUpdate');
-    lastUpdate.textContent = `Last updated: ${this.lastUpdateTime.toLocaleString(navigator.language, {
-      dateStyle: 'medium',
-      timeStyle: 'medium'
-    })}`;
-  }
-
-  async loadOrganization() {
-    const org = await this.github.getOrganization(this.orgName);
-    const orgName = org.name || this.orgName;
-
-    // Update page title
-    document.title = `${orgName} - GitHub Organization Dashboard`;
-
-    // Update header
-    document.getElementById('orgName').textContent = orgName;
-    document.getElementById('orgDesc').textContent = org.description || '';
-  }
-
   async loadRepositories() {
-    const repos = await this.github.getActiveRepositories(this.orgName);
+    const repos = await super.loadRepositories();
     const reposList = document.getElementById('reposList');
 
     reposList.innerHTML = repos.map(repo => `
@@ -391,6 +281,8 @@ class Dashboard {
         </p>
       </div>
     `).join('');
+
+    return repos;
   }
 
   showPRLoading(forceRefresh = false) {
@@ -398,51 +290,21 @@ class Dashboard {
       const prList = document.getElementById('prList');
       this.isLoadingPRs = true;
 
-      // Create mock repository groups with skeletons
-      const mockRepos = ['Repository 1', 'Repository 2'];
-      prList.innerHTML = mockRepos.map(repoName => `
-        <div class="mb-6">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-            <div class="h-6 w-48 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
-          </h3>
-          <div class="space-y-4">
-            ${Array(2).fill(0).map(() => `
-              <div class="animate-pulse border-l-4 border-gray-200 dark:border-gray-600 pl-4">
-                <div class="flex flex-col gap-2">
-                  <!-- PR Title -->
-                  <div class="h-6 w-full bg-gray-200 dark:bg-gray-600 rounded"></div>
-                  <!-- Review state and labels -->
-                  <div class="flex gap-2 mt-1">
-                    <div class="h-5 w-24 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                    <div class="h-5 w-20 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                    <div class="h-5 w-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                  </div>
-                  <!-- Author and date -->
-                  <div class="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `).join('');
+      // Use the shared component function for loading skeletons
+      prList.innerHTML = createLoadingSkeletonList({
+        itemCount: 4,
+        includeHeader: true
+      });
     } else {
       // Only add one loading skeleton at the top
       const firstRepo = document.querySelector('#prList > div:first-child');
       if (firstRepo) {
         const loadingSkeleton = document.createElement('div');
         loadingSkeleton.className = 'mb-6 loading-skeleton';
-        loadingSkeleton.innerHTML = `
-          <div class="animate-pulse border-l-4 border-gray-200 dark:border-gray-600 pl-4">
-            <div class="flex flex-col gap-2">
-              <div class="h-6 w-full bg-gray-200 dark:bg-gray-600 rounded"></div>
-              <div class="flex gap-2 mt-1">
-                <div class="h-5 w-24 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                <div class="h-5 w-20 bg-gray-200 dark:bg-gray-600 rounded"></div>
-              </div>
-              <div class="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
-            </div>
-          </div>
-        `;
+        loadingSkeleton.innerHTML = createLoadingSkeletonList({
+          itemCount: 1,
+          includeHeader: false
+        });
         firstRepo.parentNode.insertBefore(loadingSkeleton, firstRepo);
       }
     }
@@ -460,25 +322,23 @@ class Dashboard {
 
     try {
       // Try to use cache first (unless forcing refresh)
-      const cached = localStorage.getItem(this.storageKey);
-      if (cached && !forceRefresh) {
-        const { data, timestamp } = JSON.parse(cached);
-        const age = Date.now() - timestamp;
-        const maxAge = this.cacheDuration * 60 * 1000;
-
-        if (age < maxAge) {
+      if (!forceRefresh) {
+        const cacheLoaded = this.loadCachedData(this.storageKey, this.cacheDuration, (data, timestamp) => {
           this.pullRequests = data;
-          this.lastUpdateTime = new Date(timestamp);
+          this.lastUpdateTime = timestamp;
           this.renderPRStats();
           this.renderPullRequests();
           this.updateLastFetchTime();
+        });
+
+        if (cacheLoaded) {
           return;
         }
       }
 
       // Fetch fresh data
       this.pullRequests = await this.github.getOpenPullRequests(this.orgName);
-      this.savePRCache();
+      this.saveCacheData(this.storageKey, this.pullRequests);
       this.renderPRStats();
       this.renderPullRequests();
       this.updateLastFetchTime();
@@ -605,36 +465,10 @@ class Dashboard {
   }
 
   renderPRItem(pr) {
-    const borderColor = {
-      'APPROVED': 'border-green-500',
-      'CHANGES_REQUESTED': 'border-red-500',
-      'PENDING': 'border-yellow-500'
-    }[pr.reviewState] || 'border-gray-500';
-
-    // Add draft status styling
-    const draftClass = pr.isDraft ? 'opacity-70' : '';
-    const titleClass = pr.isDraft ? 'text-gray-500 dark:text-gray-400' : 'text-blue-600 dark:text-blue-400';
-
-    return `
-      <div class="border-l-4 ${borderColor} pl-4 ${draftClass}">
-        <div class="flex items-center gap-2">
-          ${pr.isDraft ? '<span class="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded">DRAFT</span>' : ''}
-          <a href="${pr.html_url}" target="_blank" class="text-lg font-medium ${titleClass} hover:underline truncate">
-            ${pr.title}
-          </a>
-        </div>
-        <div class="flex flex-wrap gap-1 mt-1">
-          ${this.renderReviewState(pr.reviewState)}
-          ${pr.labels.map(label => this.renderLabel(label)).join('')}
-          <span class="text-sm text-gray-500 dark:text-gray-400">
-            ${pr.reviews.length} reviews
-          </span>
-        </div>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          By ${pr.user.name !== pr.user.login ? `${pr.user.name} (${pr.user.login})` : pr.user.login} • Updated: ${new Date(pr.updated_at).toLocaleString()}
-        </p>
-      </div>
-    `;
+    return createPullRequestItem(pr, {
+      renderLabel: this.renderLabel.bind(this),
+      renderReviewState: this.renderReviewState.bind(this)
+    });
   }
 
   renderLabel(label) {
@@ -654,7 +488,7 @@ class Dashboard {
       'PENDING': { icon: '⊙', class: 'review-pending' }
     };
 
-    const { icon, class: className } = states[state];
+    const { icon, class: className } = states[state] || states['PENDING'];
     return `<span class="review-state ${className}">${icon} ${state.replace('_', ' ')}</span>`;
   }
 
@@ -725,30 +559,17 @@ class Dashboard {
   }
 
   loadCachedData() {
-    const cached = localStorage.getItem(this.storageKey);
-    if (!cached) {
-      return;
-    }
-
-    const { data, timestamp } = JSON.parse(cached);
-    const age = Date.now() - timestamp;
-    const maxAge = this.cacheDuration * 60 * 1000;
-
-    if (age < maxAge) {
+    return super.loadCachedData(this.storageKey, this.cacheDuration, (data, timestamp) => {
       this.pullRequests = data;
-      this.lastUpdateTime = new Date(timestamp);
+      this.lastUpdateTime = timestamp;
       this.renderPRStats();
       this.renderPullRequests();
       this.updateLastFetchTime();
-    }
+    });
   }
 
   savePRCache() {
-    const cache = {
-      data: this.pullRequests,
-      timestamp: Date.now()
-    };
-    localStorage.setItem(this.storageKey, JSON.stringify(cache));
+    return this.saveCacheData(this.storageKey, this.pullRequests);
   }
 }
 
